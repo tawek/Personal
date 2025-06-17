@@ -241,7 +241,7 @@
     function showModal(msg) {
         modal.textContent = msg;
         modal.style.display = 'block';
-        speakAll(msg);
+        speakAll(msg, 0.5); // slower for failures
         setTimeout(() => {
             modal.style.display = 'none';
             pastInput.disabled = false;
@@ -256,7 +256,7 @@
         modal.textContent = utter;
         setTimeout(() => {
             modal.style.display = 'block';
-            speakAll(utter);
+            speakAll(utter); // normal speed for success
             pastInput.disabled = false;
             partInput.disabled = false;
             pastInput.focus();
@@ -268,9 +268,10 @@
 
     }
 
-    function speakAll(msg) {
+    function speakAll(msg, rate = 1) {
         const utterance = new SpeechSynthesisUtterance(msg);
         utterance.lang = 'en-US';
+        utterance.rate = rate;
         if (enVoice) utterance.voice = enVoice;
         speechSynthesis.speak(utterance);
     }
