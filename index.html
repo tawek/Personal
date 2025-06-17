@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Irregular Verbs Game</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(45deg, #ffb6c1, #add8e6);
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        .game-box {
+            background: #fff8dc;
+            border: 4px dashed #ff69b4;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 0 20px #ff69b4;
+            text-align: center;
+            width: 80%;
+            max-width: 500px;
+            position: relative;
+        }
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .word {
+            font-size: 2em;
+            margin-bottom: 10px;
+            color: #ff1493;
+        }
+        .inputs input {
+            font-size: 1.2em;
+            margin: 10px;
+            padding: 5px 10px;
+            border-radius: 10px;
+            border: 2px solid #aaa;
+        }
+        .inputs i {
+            cursor: pointer;
+            color: #007BFF;
+            margin-left: 10px;
+        }
+        .correct { border-color: green; }
+        .wrong { border-color: red; }
+        .score {
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.5em;
+            color: #444;
+        }
+        .trophy {
+            font-size: 4em;
+            color: gold;
+            animation: pop 1s infinite alternate;
+        }
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border: 5px solid #ff0000;
+            border-radius: 15px;
+            z-index: 999;
+            text-align: center;
+            font-size: 1.5em;
+            box-shadow: 0 0 30px red;
+            display: none;
+        }
+        .spark {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: gold;
+            border-radius: 50%;
+            animation: sparkle 1s linear forwards;
+        }
+        @keyframes sparkle {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; top: -100px; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translate(0); }
+            20%, 60% { transform: translate(-10px); }
+            40%, 80% { transform: translate(10px); }
+        }
+        .shake {
+            animation: shake 0.5s;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="game-box" id="gameBox">
+        <h1>🎨 Verb Hero 🎶</h1>
+        <div class="word" id="verb">Loading... <i class="fas fa-volume-up" onclick="speak('verb')"></i></div>
+        <div class="inputs">
+            <input type="text" id="past" placeholder="Past Simple" />
+            <i class="fas fa-volume-up" onclick="speak('past')"></i><br />
+            <input type="text" id="participle" placeholder="Past Participle" />
+            <i class="fas fa-volume-up" onclick="speak('participle')"></i>
+        </div>
+        <button onclick="check()">Submit</button>
+        <div id="scoreDisplay" class="score">Score: 0</div>
+    </div>
+</div>
+<div class="modal" id="modal"></div>
+<audio id="failSound" src="https://freesound.org/data/previews/251/251461_4486188-lq.mp3"></audio>
+<script>
+    const verbs = [
+        ["be", "was/were", "been"], ["become", "became", "become"], ["begin", "began", "begun"],
+        ["bring", "brought", "brought"], ["build", "built", "built"], ["buy", "bought", "bought"],
+        ["catch", "caught", "caught"], ["choose", "chose", "chosen"], ["come", "came", "come"],
+        ["cost", "cost", "cost"], ["cut", "cut", "cut"], ["do", "did", "done"], ["draw", "drew", "drawn"],
+        ["drink", "drank", "drunk"], ["drive", "drove", "driven"], ["eat", "ate", "eaten"],
+        ["fall", "fell", "fallen"], ["feed", "fed", "fed"], ["feel", "felt", "felt"], ["fight", "fought", "fought"],
+        ["find", "found", "found"], ["fly", "flew", "flown"], ["forget", "forgot", "forgotten"],
+        ["get", "got", "gotten"], ["give", "gave", "given"], ["go", "went", "gone"],
+        ["have", "had", "had"], ["hear", "heard", "heard"], ["keep", "kept", "kept"],
+        ["know", "knew", "known"], ["learn", "learned", "learned"], ["leave", "left", "left"],
+        ["let", "let", "let"]
+    ];
+
+    let score = 0;
+    let current = [];
+    const mistakes = new Map();
+    const lastFive = [];
+
+    const verbEl = document.getElementById("verb");
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const pastInput = document.getElementById("past");
+    const partInput = document.getElementById("participle");
+    const modal = document.getElementById("modal");
+    const gameBox = document.getElementById("gameBox");
+
+    function chooseVerb() {
+        const pool = verbs.flatMap(v => Array(mistakes.get(v[0]) || 1).fill(v));
+        let pick;
+        do {
+            pick = pool[Math.floor(Math.random() * pool.length)];
+        } while (lastFive.includes(pick[0]));
+        lastFive.push(pick[0]);
+        if (lastFive.length > 5) lastFive.shift();
+        return pick;
+    }
+
+    function update() {
+        current = chooseVerb();
+        verbEl.innerHTML = `${current[0]} <i class='fas fa-volume-up' onclick="speak('verb')"></i>`;
+    }
+
+    function speak(field) {
+        let txt;
+        if (field === 'past') txt = pastInput.value;
+        else if (field === 'participle') txt = partInput.value;
+        else txt = current[0];
+        const utterance = new SpeechSynthesisUtterance(txt);
+        utterance.lang = 'en-US';
+        speechSynthesis.speak(utterance);
+    }
+
+    function showModal(msg) {
+        modal.textContent = msg;
+        modal.style.display = 'block';
+        speakAll(msg);
+        setTimeout(() => {
+            modal.style.display = 'none';
+            pastInput.disabled = false;
+            partInput.disabled = false;
+            pastInput.focus();
+        }, 5000);
+    }
+
+    function speakAll(msg) {
+        const utterance = new SpeechSynthesisUtterance(msg);
+        utterance.lang = 'en-US';
+        speechSynthesis.speak(utterance);
+    }
+
+    function addSparkles() {
+        for (let i = 0; i < 10; i++) {
+            const spark = document.createElement('div');
+            spark.className = 'spark';
+            spark.style.left = `${Math.random() * 100}%`;
+            spark.style.top = `${Math.random() * 100}%`;
+            document.body.appendChild(spark);
+            setTimeout(() => spark.remove(), 1000);
+        }
+    }
+
+    function check() {
+        const past = pastInput.value.trim().toLowerCase();
+        const part = partInput.value.trim().toLowerCase();
+        const correctPast = current[1].toLowerCase();
+        const correctPart = current[2].toLowerCase();
+        const pastOk = past === correctPast;
+        const partOk = part === correctPart;
+
+        if (pastOk && partOk) {
+            score++;
+            scoreDisplay.textContent = `Score: ${score}`;
+            addSparkles();
+            if (score >= 50) {
+                document.body.innerHTML = `<h1>🏆 Congratulations!</h1><div class='trophy'>🏆</div><p>You mastered the verbs!</p>`;
+                return;
+            }
+            pastInput.value = "";
+            partInput.value = "";
+            update();
+        } else {
+            score--;
+            scoreDisplay.textContent = `Score: ${score}`;
+            pastInput.disabled = true;
+            partInput.disabled = true;
+            const failSound = document.getElementById("failSound");
+            failSound.play();
+            gameBox.classList.add("shake");
+            setTimeout(() => gameBox.classList.remove("shake"), 500);
+            document.body.style.background = '#556b2f';
+            setTimeout(() => document.body.style.background = 'linear-gradient(45deg, #ffb6c1, #add8e6)', 600);
+            showModal(`${current[0]}, ${current[1]}, ${current[2]}`);
+            mistakes.set(current[0], (mistakes.get(current[0]) || 1) + 1);
+        }
+    }
+
+    update();
+</script>
+</body>
+</html>
