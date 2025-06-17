@@ -117,7 +117,8 @@
     </div>
 </div>
 <div class="modal" id="modal"></div>
-<audio id="failSound" src="https://freesound.org/data/previews/251/251461_4486188-lq.mp3"></audio>
+<audio id="failSound" src="puzzle-error.mp3"></audio>
+<audio id="successSound" src="success-sound.mp3"></audio>
 <script>
     const verbs = [
         ["be", "was/were", "been"], ["become", "became", "become"], ["begin", "began", "begun"],
@@ -131,6 +132,60 @@
         ["have", "had", "had"], ["hear", "heard", "heard"], ["keep", "kept", "kept"],
         ["know", "knew", "known"], ["learn", "learned", "learned"], ["leave", "left", "left"],
         ["let", "let", "let"]
+    ];
+
+    // List of 20+ positive utterances
+    const successUtterances = [
+        "Good job!",
+        "Yes!",
+        "Correct!",
+        "Awesome!",
+        "Well done!",
+        "You got it!",
+        "Fantastic!",
+        "Brilliant!",
+        "Superb!",
+        "Excellent!",
+        "That's right!",
+        "Way to go!",
+        "Nice work!",
+        "You nailed it!",
+        "Great answer!",
+        "Keep it up!",
+        "Impressive!",
+        "You rock!",
+        "Spot on!",
+        "Marvelous!",
+        "Outstanding!",
+        "Perfect!",
+        "That's the spirit!",
+        "You're on fire!",
+        "Bingo!",
+        "You aced it!",
+        "Crushed it!",
+        "Magnificent!",
+        "You’re unstoppable!",
+        "Legendary!",
+        "You’re a star!",
+        "That’s genius!",
+        "You’re amazing!",
+        "You’re a champ!",
+        "You’re a natural!",
+        "You’re incredible!",
+        "You’re a winner!",
+        "You’re a pro!",
+        "You’re a master!",
+        "You’re a wizard!",
+        "You’re a hero!",
+        "You’re a superstar!",
+        "You’re a legend!",
+        "You’re a whiz!",
+        "You’re a marvel!",
+        "You’re a virtuoso!",
+        "You’re a champion!",
+        "You’re a powerhouse!",
+        "You’re a dynamo!",
+        "You’re a rockstar!"
     ];
 
     let score = 0;
@@ -195,6 +250,24 @@
         }, 5000);
     }
 
+    function showSuccessModal() {
+        // Pick a random utterance
+        const utter = successUtterances[Math.floor(Math.random() * successUtterances.length)];
+        modal.textContent = utter;
+        setTimeout(() => {
+            modal.style.display = 'block';
+            speakAll(utter);
+            pastInput.disabled = false;
+            partInput.disabled = false;
+            pastInput.focus();
+        }, 1000);
+
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 3000);
+
+    }
+
     function speakAll(msg) {
         const utterance = new SpeechSynthesisUtterance(msg);
         utterance.lang = 'en-US';
@@ -225,6 +298,11 @@
             score++;
             scoreDisplay.textContent = `Score: ${score}`;
             addSparkles();
+            // Play success sound
+            const successSound = document.getElementById("successSound");
+            successSound.currentTime = 0;
+            successSound.play();
+            showSuccessModal();
             if (score >= 50) {
                 document.body.innerHTML = `<h1>🏆 Congratulations!</h1><div class='trophy'>🏆</div><p>You mastered the verbs!</p>`;
                 return;
@@ -239,11 +317,17 @@
             partInput.disabled = true;
             const failSound = document.getElementById("failSound");
             failSound.play();
+            // sleep for 1 second
             gameBox.classList.add("shake");
+            setTimeout(() => {
+                pastInput.disabled = false;
+                partInput.disabled = false;
+                pastInput.focus();
+            }, 1000);
             setTimeout(() => gameBox.classList.remove("shake"), 500);
             document.body.style.background = '#556b2f';
             setTimeout(() => document.body.style.background = 'linear-gradient(45deg, #ffb6c1, #add8e6)', 600);
-            showModal(`${current[0]}, ${current[1]}, ${current[2]}`);
+                setTimeout(() => showModal(`${current[0]}, ${current[1]}, ${current[2]}`), 2000);
             mistakes.set(current[0], (mistakes.get(current[0]) || 1) + 1);
         }
     }
