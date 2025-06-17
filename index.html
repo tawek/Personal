@@ -144,6 +144,16 @@
     const partInput = document.getElementById("participle");
     const modal = document.getElementById("modal");
     const gameBox = document.getElementById("gameBox");
+    let enVoice = null;
+
+    function loadEnglishVoice() {
+        const voices = speechSynthesis.getVoices();
+        enVoice = voices.find(v => v.lang.startsWith('en') && v.localService)
+            || voices.find(v => v.lang.startsWith('en'));
+    }
+
+    speechSynthesis.onvoiceschanged = loadEnglishVoice;
+    loadEnglishVoice(); // also load now
 
     function chooseVerb() {
         const pool = verbs.flatMap(v => Array(mistakes.get(v[0]) || 1).fill(v));
@@ -166,8 +176,10 @@
         if (field === 'past') txt = pastInput.value;
         else if (field === 'participle') txt = partInput.value;
         else txt = current[0];
+
         const utterance = new SpeechSynthesisUtterance(txt);
         utterance.lang = 'en-US';
+        if (enVoice) utterance.voice = enVoice;
         speechSynthesis.speak(utterance);
     }
 
