@@ -99,12 +99,48 @@
         .shake {
             animation: shake 0.5s;
         }
+        .music-btn {
+            display: none;
+        }
+        .music-icon {
+            font-size: 1.2em;
+            margin-left: 8px;
+            vertical-align: middle;
+            transition: filter 0.2s;
+        }
+        .music-icon.stopped {
+            filter: grayscale(1) brightness(0.7);
+            opacity: 0.5;
+        }
+        .music-icon:hover {
+            filter: brightness(1.5);
+        }
+        .submit-btn {
+            margin-top: 18px;
+            font-size: 1.4em;
+            padding: 16px 44px;
+            border-radius: 18px;
+            border: none;
+            background: linear-gradient(90deg, #ff69b4 40%, #ffd700 100%);
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 4px 18px #ffb6c1;
+            cursor: pointer;
+            transition: transform 0.08s, box-shadow 0.08s;
+        }
+        .submit-btn:active {
+            transform: scale(0.93);
+            box-shadow: 0 2px 8px #ffb6c1;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="game-box" id="gameBox">
-        <h1>🎨 Verb Hero 🎶</h1>
+        <h1>
+            🎨 Verb Hero
+            <span id="musicToggleBtn" class="music-icon" title="Stop Music" style="cursor:pointer;">🎶</span>
+        </h1>
         <div class="word" id="verb">Loading... <i class="fas fa-volume-up" onclick="speak('verb')"></i></div>
         <div class="inputs">
             <input type="text" id="past" placeholder="Past Simple" />
@@ -112,13 +148,14 @@
             <input type="text" id="participle" placeholder="Past Participle" />
             <i class="fas fa-volume-up" onclick="speak('participle')"></i>
         </div>
-        <button onclick="check()">Submit</button>
+        <button id="submitBtn" class="submit-btn" onclick="check()">Submit</button>
         <div id="scoreDisplay" class="score">Score: 0</div>
     </div>
 </div>
 <div class="modal" id="modal"></div>
 <audio id="failSound" src="puzzle-error.mp3"></audio>
 <audio id="successSound" src="success-sound.mp3"></audio>
+<audio id="bgMusic" src="peaceful-soundscape.mp3" loop></audio>
 <script>
     const verbs = [
         ["be", "was/were", "been"], ["become", "became", "become"], ["begin", "began", "begun"],
@@ -334,6 +371,33 @@
     }
 
     update();
+
+    // Background music logic
+    const bgMusic = document.getElementById("bgMusic");
+    bgMusic.volume = 0.5;
+    bgMusic.play().catch(() => {}); // Autoplay may be blocked until user interacts
+
+    const musicToggleBtn = document.getElementById("musicToggleBtn");
+    let musicPlaying = true;
+    musicToggleBtn.onclick = function() {
+        if (musicPlaying) {
+            bgMusic.pause();
+            musicToggleBtn.title = "Play Music";
+            musicToggleBtn.classList.add("stopped");
+        } else {
+            bgMusic.play();
+            musicToggleBtn.title = "Stop Music";
+            musicToggleBtn.classList.remove("stopped");
+        }
+        musicPlaying = !musicPlaying;
+    };
+
+    // Add push animation to submit button on click
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.addEventListener("click", function() {
+        submitBtn.classList.add("submit-btn-push");
+        setTimeout(() => submitBtn.classList.remove("submit-btn-push"), 120);
+    });
 </script>
 </body>
 </html>
