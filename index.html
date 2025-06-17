@@ -198,6 +198,7 @@
     function speakAll(msg) {
         const utterance = new SpeechSynthesisUtterance(msg);
         utterance.lang = 'en-US';
+        if (enVoice) utterance.voice = enVoice;
         speechSynthesis.speak(utterance);
     }
 
