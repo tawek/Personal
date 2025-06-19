@@ -257,7 +257,11 @@
         let musicPlaying = true;
 
         // Add mastery counter map - start with 3 for each verb
-        const masteryCounts = new Map(verbs.map(verb => [verb[0], 3]));
+        const masteryCounts = new Map(verbs.map(verb => [verb[0], 0]));
+        // set first 3 verbs to 1
+        masteryCounts.set(verbs[0][0], 1);
+        masteryCounts.set(verbs[1][0], 1);
+        masteryCounts.set(verbs[2][0], 1);
         let remainingVerbs = verbs.length; // Track non-mastered verbs
 
         // Get DOM elements
@@ -418,18 +422,40 @@
             }
         }
 
+        // Helper function for weighted random selection of a verb based on mastery counts
+        function weightedRandomSelection(verbs, masteryCounts) {
+            // Calculate the sum of all weights
+            let totalWeight = 0;
+            verbs.forEach(verb => {
+                totalWeight += masteryCounts.get(verb[0]);
+            });
+
+            if (totalWeight === 0) {
+                return null; // No verbs with weight > 0
+            }
+
+            // Pick a random value between 0 and sum of all weights
+            const randomValue = Math.random() * totalWeight;
+            let runningTotal = 0;
+
+            // Find which verb's weight contains our random value
+            for (const verb of verbs) {
+                runningTotal += masteryCounts.get(verb[0]);
+                if (runningTotal >= randomValue) {
+                    return verb;
+                }
+            }
+
+            // Fallback in case of rounding errors
+            return verbs[verbs.length - 1];
+        }
+
         function chooseVerb() {
             // Get only non-mastered verbs (those with counter > 0)
             const nonMasteredVerbs = verbs.filter(verb => masteryCounts.get(verb[0]) > 0);
 
-            // Calculate the sum of all counters for weighted selection
-            let totalWeight = 0;
-            nonMasteredVerbs.forEach(verb => {
-                totalWeight += masteryCounts.get(verb[0]);
-            });
-
             // If all verbs are mastered, we shouldn't get here due to game completion check
-            if (totalWeight === 0) {
+            if (nonMasteredVerbs.length === 0) {
                 console.debug("[Game] All verbs mastered, game should be complete!");
                 return verbs[Math.floor(Math.random() * verbs.length)]; // Fallback
             }
@@ -438,40 +464,18 @@
             // Use max(5, remainingVerbs - 1) as the history size
             const historySize = Math.max(5, remainingVerbs - 1);
 
-            // Weighted random selection
-            // Pick a random value between 0 and sum of all weights
-            const randomValue = Math.random() * totalWeight;
-            let runningTotal = 0;
-            let selectedVerb = nonMasteredVerbs[0]; // Default in case of issues
-
-            // Find which verb's weight contains our random value
-            for (const verb of nonMasteredVerbs) {
-                runningTotal += masteryCounts.get(verb[0]);
-                if (runningTotal >= randomValue) {
-                    selectedVerb = verb;
-                    break;
-                }
-            }
+            // Get initial weighted random verb
+            let pick = weightedRandomSelection(nonMasteredVerbs, masteryCounts);
 
             // Make sure we don't pick a recently used verb unless necessary
             // Try up to 10 times to find a verb not in lastFive
             let attempts = 0;
-            let pick = selectedVerb;
 
             // Only try to avoid duplicates if we have enough verbs
             if (nonMasteredVerbs.length > historySize) {
                 while (lastFive.includes(pick[0]) && attempts < 10) {
-                    // Recalculate weight-based selection
-                    runningTotal = 0;
-                    const newRandomValue = Math.random() * totalWeight;
-
-                    for (const verb of nonMasteredVerbs) {
-                        runningTotal += masteryCounts.get(verb[0]);
-                        if (runningTotal >= newRandomValue) {
-                            pick = verb;
-                            break;
-                        }
-                    }
+                    // Try another weighted random selection
+                    pick = weightedRandomSelection(nonMasteredVerbs, masteryCounts);
                     attempts++;
                 }
             }
@@ -541,14 +545,23 @@
         function updateScoreDisplay() {
             // Calculate sum of all counters
             let totalCounters = 0;
-            masteryCounts.forEach(count => {
+            let masteredCount = 0;
+
+            // Count mastered verbs and sum all counters
+            masteryCounts.forEach((count, verb) => {
+                if (count === 0) {
+                    masteredCount++;
+                }
                 totalCounters += count;
             });
+
+            // Update remainingVerbs based on current mastery counts
+            remainingVerbs = verbs.length - masteredCount;
 
             // Calculate percentage: 100% - (sum of counters / total possible counters)
             // Total possible counters is number of verbs * 3 (starting value)
             const masteryPercentage = Math.round(100 - (totalCounters / (verbs.length * 3)) * 100);
-            scoreDisplay.textContent = `Progress: ${masteryPercentage}%`;
+            scoreDisplay.textContent = `Progress: ${masteryPercentage}% (${masteredCount}/${verbs.length} verbs mastered)`;
         }
 
         // Success function to handle all success-related logic in sequence
