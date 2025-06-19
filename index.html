@@ -240,11 +240,20 @@
 
     function loadEnglishVoice() {
         const voices = speechSynthesis.getVoices();
+        console.debug("[Speech] Available voices:", voices);
         enVoice = voices.find(v => v.lang.startsWith('en') && v.localService)
             || voices.find(v => v.lang.startsWith('en'));
+        if (enVoice) {
+            console.debug("[Speech] Selected English voice:", enVoice);
+        } else {
+            console.warn("[Speech] No English voice found!");
+        }
     }
 
-    speechSynthesis.onvoiceschanged = loadEnglishVoice;
+    speechSynthesis.onvoiceschanged = () => {
+        console.debug("[Speech] Voices changed event triggered");
+        loadEnglishVoice();
+    };
     loadEnglishVoice(); // also load now
 
     function chooseVerb() {
@@ -261,6 +270,7 @@
     function update() {
         current = chooseVerb();
         verbEl.innerHTML = `${current[0]} <i class='fas fa-volume-up' onclick="speak('verb')"></i>`;
+        speak('verb'); // Speak the first form when a new word is picked
     }
 
     function speak(field) {
@@ -269,9 +279,32 @@
         else if (field === 'participle') txt = partInput.value;
         else txt = current[0];
 
+        console.debug(`[Speech] speak('${field}') called. Text: "${txt}"`);
+        if (!txt) {
+            console.warn("[Speech] No text to speak for field:", field);
+            return;
+        }
+        if (!('speechSynthesis' in window)) {
+            console.error("[Speech] speechSynthesis API not available in this browser.");
+            return;
+        }
         const utterance = new SpeechSynthesisUtterance(txt);
         utterance.lang = 'en-US';
-        if (enVoice) utterance.voice = enVoice;
+        if (enVoice) {
+            utterance.voice = enVoice;
+            console.debug("[Speech] Using voice:", enVoice);
+        } else {
+            console.warn("[Speech] No English voice set for utterance.");
+        }
+        utterance.onerror = (e) => {
+            console.error("[Speech] Utterance error:", e);
+        };
+        utterance.onstart = () => {
+            console.debug("[Speech] Utterance started.");
+        };
+        utterance.onend = () => {
+            console.debug("[Speech] Utterance ended.");
+        };
         speechSynthesis.speak(utterance);
     }
 
@@ -301,15 +334,37 @@
 
         setTimeout(() => {
             modal.style.display = 'none';
+            pastInput.value = "";
+            partInput.value = "";
+            update(); // Call update only after modal closes
         }, 3000);
 
     }
 
     function speakAll(msg, rate = 1) {
+        console.debug(`[Speech] speakAll() called. Text: "${msg}", Rate: ${rate}`);
+        if (!('speechSynthesis' in window)) {
+            console.error("[Speech] speechSynthesis API not available in this browser.");
+            return;
+        }
         const utterance = new SpeechSynthesisUtterance(msg);
         utterance.lang = 'en-US';
         utterance.rate = rate;
-        if (enVoice) utterance.voice = enVoice;
+        if (enVoice) {
+            utterance.voice = enVoice;
+            console.debug("[Speech] Using voice:", enVoice);
+        } else {
+            console.warn("[Speech] No English voice set for utterance.");
+        }
+        utterance.onerror = (e) => {
+            console.error("[Speech] Utterance error:", e);
+        };
+        utterance.onstart = () => {
+            console.debug("[Speech] Utterance started.");
+        };
+        utterance.onend = () => {
+            console.debug("[Speech] Utterance ended.");
+        };
         speechSynthesis.speak(utterance);
     }
 
@@ -347,7 +402,7 @@
             }
             pastInput.value = "";
             partInput.value = "";
-            update();
+            // update(); // <-- Remove this line
         } else {
             score--;
             scoreDisplay.textContent = `Score: ${score}`;
@@ -397,6 +452,13 @@
     submitBtn.addEventListener("click", function() {
         submitBtn.classList.add("submit-btn-push");
         setTimeout(() => submitBtn.classList.remove("submit-btn-push"), 120);
+    });
+
+    // Add debug for speech icon clicks
+    document.querySelectorAll('.fa-volume-up').forEach(icon => {
+        icon.addEventListener('click', (e) => {
+            console.debug("[Speech] Volume icon clicked.", e.target);
+        });
     });
 </script>
 </body>
