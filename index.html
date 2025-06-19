@@ -609,6 +609,8 @@
             verbEl.innerHTML = `${current[0]} <i class='fas fa-volume-up' onclick="speak('verb')"></i>`;
             // Auto-speak after user interaction
             speak('verb');
+            // Focus on past input
+            pastInput.focus();
         }
 
 
@@ -890,8 +892,8 @@
 
     const pastInput  = document.getElementById("past");
         // Add event listeners for Enter key to move to the next input and speak the entered word
-    pastInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
+     pastInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === 'Tab') {
             event.preventDefault();
             speakText(pastInput.value); // Speak the entered word
             partInput.focus(); // Move to the next input
@@ -899,8 +901,10 @@
     });
 
     const partInput = document.getElementById("participle");
+
+
     partInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' || event.key === 'Tab') {
             event.preventDefault();
             speakText(partInput.value); // Speak the entered word
             submitBtn.focus(); // Optionally focus the submit button
