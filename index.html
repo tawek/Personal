@@ -256,6 +256,10 @@
         let enVoice = null;
         let musicPlaying = true;
 
+        // Add mastery counter map - start with 3 for each verb
+        const masteryCounts = new Map(verbs.map(verb => [verb[0], 3]));
+        let remainingVerbs = verbs.length; // Track non-mastered verbs
+
         // Get DOM elements
         const verbEl = document.getElementById("verb");
         const scoreDisplay = document.getElementById("scoreDisplay");
@@ -271,6 +275,7 @@
         loadVoice();
 
         // Initialize first verb and start the game
+        updateScoreDisplay();
         update();
 
         // Start background music (will work because user has interacted)
@@ -414,20 +419,78 @@
         }
 
         function chooseVerb() {
-            const pool = verbs.flatMap(v => Array(mistakes.get(v[0]) || 1).fill(v));
-            let pick;
-            do {
-                pick = pool[Math.floor(Math.random() * pool.length)];
-            } while (lastFive.includes(pick[0]));
+            // Get only non-mastered verbs (those with counter > 0)
+            const nonMasteredVerbs = verbs.filter(verb => masteryCounts.get(verb[0]) > 0);
+
+            // Calculate the sum of all counters for weighted selection
+            let totalWeight = 0;
+            nonMasteredVerbs.forEach(verb => {
+                totalWeight += masteryCounts.get(verb[0]);
+            });
+
+            // If all verbs are mastered, we shouldn't get here due to game completion check
+            if (totalWeight === 0) {
+                console.debug("[Game] All verbs mastered, game should be complete!");
+                return verbs[Math.floor(Math.random() * verbs.length)]; // Fallback
+            }
+
+            // Adjust lastFive size dynamically based on remaining non-mastered verbs
+            // Use max(5, remainingVerbs - 1) as the history size
+            const historySize = Math.max(5, remainingVerbs - 1);
+
+            // Weighted random selection
+            // Pick a random value between 0 and sum of all weights
+            const randomValue = Math.random() * totalWeight;
+            let runningTotal = 0;
+            let selectedVerb = nonMasteredVerbs[0]; // Default in case of issues
+
+            // Find which verb's weight contains our random value
+            for (const verb of nonMasteredVerbs) {
+                runningTotal += masteryCounts.get(verb[0]);
+                if (runningTotal >= randomValue) {
+                    selectedVerb = verb;
+                    break;
+                }
+            }
+
+            // Make sure we don't pick a recently used verb unless necessary
+            // Try up to 10 times to find a verb not in lastFive
+            let attempts = 0;
+            let pick = selectedVerb;
+
+            // Only try to avoid duplicates if we have enough verbs
+            if (nonMasteredVerbs.length > historySize) {
+                while (lastFive.includes(pick[0]) && attempts < 10) {
+                    // Recalculate weight-based selection
+                    runningTotal = 0;
+                    const newRandomValue = Math.random() * totalWeight;
+
+                    for (const verb of nonMasteredVerbs) {
+                        runningTotal += masteryCounts.get(verb[0]);
+                        if (runningTotal >= newRandomValue) {
+                            pick = verb;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+            }
+
+            // Update lastFive history with the chosen verb
             lastFive.push(pick[0]);
-            if (lastFive.length > 5) lastFive.shift();
+            if (lastFive.length > historySize) {
+                lastFive.shift();
+            }
+
+            console.debug(`[Game] Selected verb: "${pick[0]}" (mastery count: ${masteryCounts.get(pick[0])})`);
             return pick;
         }
 
         function update() {
+            // Get next verb based on weighted selection
             current = chooseVerb();
             verbEl.innerHTML = `${current[0]} <i class='fas fa-volume-up' onclick="speak('verb')"></i>`;
-            // Now it's safe to auto-speak after user interaction
+            // Auto-speak after user interaction
             speak('verb');
         }
 
@@ -474,13 +537,38 @@
             }, 5000);
         }
 
+        // Calculate and display score as percentage of mastery
+        function updateScoreDisplay() {
+            // Calculate sum of all counters
+            let totalCounters = 0;
+            masteryCounts.forEach(count => {
+                totalCounters += count;
+            });
+
+            // Calculate percentage: 100% - (sum of counters / total possible counters)
+            // Total possible counters is number of verbs * 3 (starting value)
+            const masteryPercentage = Math.round(100 - (totalCounters / (verbs.length * 3)) * 100);
+            scoreDisplay.textContent = `Progress: ${masteryPercentage}%`;
+        }
+
         // Success function to handle all success-related logic in sequence
         function success() {
-            score++;
-            scoreDisplay.textContent = `Score: ${score}`;
+            // Update mastery counter for current verb
+            const currentCount = masteryCounts.get(current[0]);
+            if (currentCount > 0) {
+                masteryCounts.set(current[0], currentCount - 1);
+
+                // If verb is now mastered, decrement remaining verbs count
+                if (masteryCounts.get(current[0]) === 0) {
+                    remainingVerbs--;
+                    console.debug(`[Game] Verb "${current[0]}" mastered! Remaining verbs: ${remainingVerbs}`);
+                }
+            }
+
+            // Update score display with new percentage
+            updateScoreDisplay();
 
             // Add visual sparkles effect
-            // Inline the sparkles function to avoid dependency on the external one
             for (let i = 0; i < 10; i++) {
                 const spark = document.createElement('div');
                 spark.className = 'spark';
@@ -490,27 +578,27 @@
                 setTimeout(() => spark.remove(), 1000);
             }
 
-            // Check for game completion
-            if (score >= 50) {
-                document.body.innerHTML = `<h1>🏆 Congratulations!</h1><div class='trophy'>🏆</div><p>You mastered the verbs!</p>`;
+            // Check for game completion - all verbs mastered
+            if (remainingVerbs <= 0) {
+                document.body.innerHTML = `<h1>🏆 Congratulations!</h1><div class='trophy'>🏆</div><p>You mastered all the verbs!</p>`;
                 return;
             }
 
-            // 1. Play success sound and wait for completion
+            // Play success sound and continue game flow
             const successSound = document.getElementById("successSound");
             play(successSound, function() {
-                // 2. Say the three forms of the verb and wait for completion
+                // Say the three forms of the verb and wait for completion
                 const verbForms = `${current[0]}, ${current[1]}, ${current[2]}`;
                 console.debug("[Speech] Speaking verb forms:", verbForms);
 
                 speak(verbForms, 0.9, function() {
-                    // 3. Show and speak congratulatory message
+                    // Show and speak congratulatory message
                     const utter = successUtterances[Math.floor(Math.random() * successUtterances.length)];
                     modal.textContent = utter;
                     modal.style.display = 'block';
 
                     speak(utter, function() {
-                        // 4. After all audio completes, close modal and update for next word
+                        // After all audio completes, close modal and update for next word
                         setTimeout(() => {
                             modal.style.display = 'none';
                             pastInput.value = "";
@@ -524,8 +612,21 @@
 
         // Failure function to handle all failure-related logic in sequence
         function failure() {
-            score--;
-            scoreDisplay.textContent = `Score: ${score}`;
+            // Increase the mastery counter for the current verb
+            const currentCount = masteryCounts.get(current[0]);
+            // Only increment if verb was not already mastered
+            if (currentCount === 0) {
+                // If it was previously mastered, increment remaining verbs count
+                masteryCounts.set(current[0], 1);
+                remainingVerbs++;
+                console.debug(`[Game] Verb "${current[0]}" no longer mastered. Remaining verbs: ${remainingVerbs}`);
+            } else {
+                // Otherwise just increment the counter
+                masteryCounts.set(current[0], currentCount + 1);
+            }
+
+            // Update score display with new percentage
+            updateScoreDisplay();
 
             // Disable inputs temporarily
             pastInput.disabled = true;
