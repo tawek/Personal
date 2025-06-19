@@ -259,9 +259,27 @@
         </h1>
         <div class="word" id="verb">Loading... <i class="fas fa-volume-up" onclick="speak('verb')"></i></div>
         <div class="inputs">
-            <input type="text" id="past" placeholder="Past Simple" />
+            <input
+                type="text"
+                id="past"
+                placeholder="Past Simple"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                inputmode="none"
+            />
             <i class="fas fa-volume-up" onclick="speak('past')"></i><br />
-            <input type="text" id="participle" placeholder="Past Participle" />
+            <input
+                type="text"
+                id="participle"
+                placeholder="Past Participle"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                inputmode="none"
+            />
             <i class="fas fa-volume-up" onclick="speak('participle')"></i>
         </div>
         <button id="submitBtn" class="submit-btn" onclick="check()">Submit</button>
