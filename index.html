@@ -132,10 +132,52 @@
             transform: scale(0.93);
             box-shadow: 0 2px 8px #ffb6c1;
         }
+        .cover-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff9a9e, #67b8de);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .cover-title {
+            font-size: 3.5em;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+        .start-button {
+            padding: 20px 60px;
+            font-size: 2em;
+            background: #fff;
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            color: #ff69b4;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .start-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .start-button:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
-<div class="container">
+<div class="cover-overlay" id="coverOverlay">
+    <div class="cover-title">Welcome to Verb Hero!</div>
+    <button class="start-button" id="startBtn">Start Game</button>
+</div>
+<div class="container" style="display:none;" id="gameContainer">
     <div class="game-box" id="gameBox">
         <h1>
             🎨 Verb Hero
@@ -157,6 +199,7 @@
 <audio id="successSound" src="success-sound.mp3"></audio>
 <audio id="bgMusic" src="peaceful-soundscape.mp3" loop></audio>
 <script>
+    // Define game data and variables
     const verbs = [
         ["be", "was/were", "been"], ["become", "became", "become"], ["begin", "began", "begun"],
         ["bring", "brought", "brought"], ["build", "built", "built"], ["buy", "bought", "bought"],
@@ -171,295 +214,296 @@
         ["let", "let", "let"]
     ];
 
-    // List of 20+ positive utterances
+    // List of positive utterances
     const successUtterances = [
-        "Good job!",
-        "Yes!",
-        "Correct!",
-        "Awesome!",
-        "Well done!",
-        "You got it!",
-        "Fantastic!",
-        "Brilliant!",
-        "Superb!",
-        "Excellent!",
-        "That's right!",
-        "Way to go!",
-        "Nice work!",
-        "You nailed it!",
-        "Great answer!",
-        "Keep it up!",
-        "Impressive!",
-        "You rock!",
-        "Spot on!",
-        "Marvelous!",
-        "Outstanding!",
-        "Perfect!",
-        "That's the spirit!",
-        "You're on fire!",
-        "Bingo!",
-        "You aced it!",
-        "Crushed it!",
-        "Magnificent!",
-        "You’re unstoppable!",
-        "Legendary!",
-        "You’re a star!",
-        "That’s genius!",
-        "You’re amazing!",
-        "You’re a champ!",
-        "You’re a natural!",
-        "You’re incredible!",
-        "You’re a winner!",
-        "You’re a pro!",
-        "You’re a master!",
-        "You’re a wizard!",
-        "You’re a hero!",
-        "You’re a superstar!",
-        "You’re a legend!",
-        "You’re a whiz!",
-        "You’re a marvel!",
-        "You’re a virtuoso!",
-        "You’re a champion!",
-        "You’re a powerhouse!",
-        "You’re a dynamo!",
-        "You’re a rockstar!"
+        "Good job!", "Yes!", "Correct!", "Awesome!", "Well done!", "You got it!", "Fantastic!",
+        "Brilliant!", "Superb!", "Excellent!", "That's right!", "Way to go!", "Nice work!",
+        "You nailed it!", "Great answer!", "Keep it up!", "Impressive!", "You rock!",
+        "Spot on!", "Marvelous!", "Outstanding!", "Perfect!", "That's the spirit!",
+        "You're on fire!", "Bingo!", "You aced it!", "Crushed it!", "Magnificent!",
+        "You're unstoppable!", "Legendary!", "You're a star!", "That's genius!",
+        "You're amazing!", "You're a champ!", "You're a natural!", "You're incredible!",
+        "You're a winner!", "You're a pro!", "You're a master!", "You're a wizard!",
+        "You're a hero!", "You're a superstar!", "You're a legend!", "You're a whiz!",
+        "You're a marvel!", "You're a virtuoso!", "You're a champion!", "You're a powerhouse!",
+        "You're a dynamo!", "You're a rockstar!"
     ];
 
-    let score = 0;
-    let current = [];
-    const mistakes = new Map();
-    const lastFive = [];
+    // Get DOM references
+    const coverOverlay = document.getElementById("coverOverlay");
+    const gameContainer = document.getElementById("gameContainer");
+    const startBtn = document.getElementById("startBtn");
 
-    const verbEl = document.getElementById("verb");
-    const scoreDisplay = document.getElementById("scoreDisplay");
-    const pastInput = document.getElementById("past");
-    const partInput = document.getElementById("participle");
-    const modal = document.getElementById("modal");
-    const gameBox = document.getElementById("gameBox");
-    let enVoice = null;
+    // Start button click handler - all game initialization happens here
+    startBtn.onclick = function() {
+        // Hide overlay and show game
+        coverOverlay.style.display = 'none';
+        gameContainer.style.display = 'flex';
 
-    function loadEnglishVoice() {
-        const voices = speechSynthesis.getVoices();
-        console.debug("[Speech] Available voices:", voices);
-        enVoice = voices.find(v => v.lang.startsWith('en') && v.localService)
-            || voices.find(v => v.lang.startsWith('en'));
-        if (enVoice) {
-            console.debug("[Speech] Selected English voice:", enVoice);
-        } else {
-            console.warn("[Speech] No English voice found!");
-        }
-    }
-
-    speechSynthesis.onvoiceschanged = () => {
-        console.debug("[Speech] Voices changed event triggered");
-        loadEnglishVoice();
+        // Initialize the game after user interaction
+        initGame();
     };
-    loadEnglishVoice(); // also load now
 
-    function chooseVerb() {
-        const pool = verbs.flatMap(v => Array(mistakes.get(v[0]) || 1).fill(v));
-        let pick;
-        do {
-            pick = pool[Math.floor(Math.random() * pool.length)];
-        } while (lastFive.includes(pick[0]));
-        lastFive.push(pick[0]);
-        if (lastFive.length > 5) lastFive.shift();
-        return pick;
-    }
+    // All game logic contained in this function - only called after user interaction
+    function initGame() {
+        console.debug("[App] Initializing app logic after user interaction...");
 
-    function update() {
-        current = chooseVerb();
-        verbEl.innerHTML = `${current[0]} <i class='fas fa-volume-up' onclick="speak('verb')"></i>`;
-        speak('verb'); // Speak the first form when a new word is picked
-    }
+        // Initialize variables
+        let score = 0;
+        let current = [];
+        const mistakes = new Map();
+        const lastFive = [];
+        let enVoice = null;
+        let musicPlaying = true;
 
-    function speak(field) {
-        let txt;
-        if (field === 'past') txt = pastInput.value;
-        else if (field === 'participle') txt = partInput.value;
-        else txt = current[0];
+        // Get DOM elements
+        const verbEl = document.getElementById("verb");
+        const scoreDisplay = document.getElementById("scoreDisplay");
+        const pastInput = document.getElementById("past");
+        const partInput = document.getElementById("participle");
+        const modal = document.getElementById("modal");
+        const gameBox = document.getElementById("gameBox");
+        const musicToggleBtn = document.getElementById("musicToggleBtn");
+        const submitBtn = document.getElementById("submitBtn");
+        const bgMusic = document.getElementById("bgMusic");
 
-        console.debug(`[Speech] speak('${field}') called. Text: "${txt}"`);
-        if (!txt) {
-            console.warn("[Speech] No text to speak for field:", field);
-            return;
-        }
-        if (!('speechSynthesis' in window)) {
-            console.error("[Speech] speechSynthesis API not available in this browser.");
-            return;
-        }
-        const utterance = new SpeechSynthesisUtterance(txt);
-        utterance.lang = 'en-US';
-        if (enVoice) {
-            utterance.voice = enVoice;
-            console.debug("[Speech] Using voice:", enVoice);
-        } else {
-            console.warn("[Speech] No English voice set for utterance.");
-        }
-        utterance.onerror = (e) => {
-            console.error("[Speech] Utterance error:", e);
+        // Load voices - should work immediately after user interaction
+        loadVoice();
+
+        // Initialize first verb and start the game
+        update();
+
+        // Start background music (will work because user has interacted)
+        bgMusic.volume = 0.5;
+        bgMusic.play().catch(e => console.warn("[Audio] Music autoplay failed:", e));
+
+        // Set up music toggle
+        musicToggleBtn.onclick = function() {
+            if (musicPlaying) {
+                bgMusic.pause();
+                musicToggleBtn.title = "Play Music";
+                musicToggleBtn.classList.add("stopped");
+            } else {
+                bgMusic.play();
+                musicToggleBtn.title = "Stop Music";
+                musicToggleBtn.classList.remove("stopped");
+            }
+            musicPlaying = !musicPlaying;
         };
-        utterance.onstart = () => {
-            console.debug("[Speech] Utterance started.");
-        };
-        utterance.onend = () => {
-            console.debug("[Speech] Utterance ended.");
-        };
-        speechSynthesis.speak(utterance);
-    }
 
-    function showModal(msg) {
-        modal.textContent = msg;
-        modal.style.display = 'block';
-        speakAll(msg, 0.5); // slower for failures
-        setTimeout(() => {
-            modal.style.display = 'none';
-            pastInput.disabled = false;
-            partInput.disabled = false;
-            pastInput.focus();
-        }, 5000);
-    }
+        // Add debug for speech icon clicks
+        document.querySelectorAll('.fa-volume-up').forEach(icon => {
+            icon.addEventListener('click', (e) => {
+                console.debug("[Speech] Volume icon clicked.", e.target);
+            });
+        });
 
-    function showSuccessModal() {
-        // Pick a random utterance
-        const utter = successUtterances[Math.floor(Math.random() * successUtterances.length)];
-        modal.textContent = utter;
-        setTimeout(() => {
-            modal.style.display = 'block';
-            speakAll(utter); // normal speed for success
-            pastInput.disabled = false;
-            partInput.disabled = false;
-            pastInput.focus();
-        }, 1000);
+        // Add push animation to submit button
+        submitBtn.addEventListener("click", function() {
+            submitBtn.classList.add("submit-btn-push");
+            setTimeout(() => submitBtn.classList.remove("submit-btn-push"), 120);
+        });
 
-        setTimeout(() => {
-            modal.style.display = 'none';
-            pastInput.value = "";
-            partInput.value = "";
-            update(); // Call update only after modal closes
-        }, 3000);
+        // Expose functions to global scope for inline handlers
+        window.speak = speak;
+        window.check = check;
 
-    }
+        // CORE FUNCTIONS
 
-    function speakAll(msg, rate = 1) {
-        console.debug(`[Speech] speakAll() called. Text: "${msg}", Rate: ${rate}`);
-        if (!('speechSynthesis' in window)) {
-            console.error("[Speech] speechSynthesis API not available in this browser.");
-            return;
+        function loadVoice() {
+            const voices = speechSynthesis.getVoices();
+            console.debug("[Speech] Available voices:", voices);
+            enVoice = voices.find(v => v.lang.startsWith('en') && v.localService)
+                || voices.find(v => v.lang.startsWith('en'));
+
+            if (enVoice) {
+                console.debug("[Speech] Selected English voice:", enVoice);
+            } else {
+                console.warn("[Speech] No English voice found!");
+
+                // If voices aren't loaded immediately, listen for the voiceschanged event
+                speechSynthesis.onvoiceschanged = function() {
+                    const voices = speechSynthesis.getVoices();
+                    enVoice = voices.find(v => v.lang.startsWith('en') && v.localService)
+                        || voices.find(v => v.lang.startsWith('en'));
+                    console.debug("[Speech] Voices loaded on change event. Selected voice:", enVoice);
+                };
+            }
         }
-        const utterance = new SpeechSynthesisUtterance(msg);
-        utterance.lang = 'en-US';
-        utterance.rate = rate;
-        if (enVoice) {
-            utterance.voice = enVoice;
-            console.debug("[Speech] Using voice:", enVoice);
-        } else {
-            console.warn("[Speech] No English voice set for utterance.");
+
+        function chooseVerb() {
+            const pool = verbs.flatMap(v => Array(mistakes.get(v[0]) || 1).fill(v));
+            let pick;
+            do {
+                pick = pool[Math.floor(Math.random() * pool.length)];
+            } while (lastFive.includes(pick[0]));
+            lastFive.push(pick[0]);
+            if (lastFive.length > 5) lastFive.shift();
+            return pick;
         }
-        utterance.onerror = (e) => {
-            console.error("[Speech] Utterance error:", e);
-        };
-        utterance.onstart = () => {
-            console.debug("[Speech] Utterance started.");
-        };
-        utterance.onend = () => {
-            console.debug("[Speech] Utterance ended.");
-        };
-        speechSynthesis.speak(utterance);
-    }
 
-    function addSparkles() {
-        for (let i = 0; i < 10; i++) {
-            const spark = document.createElement('div');
-            spark.className = 'spark';
-            spark.style.left = `${Math.random() * 100}%`;
-            spark.style.top = `${Math.random() * 100}%`;
-            document.body.appendChild(spark);
-            setTimeout(() => spark.remove(), 1000);
+        function update() {
+            current = chooseVerb();
+            verbEl.innerHTML = `${current[0]} <i class='fas fa-volume-up' onclick="speak('verb')"></i>`;
+            // Now it's safe to auto-speak after user interaction
+            speak('verb');
         }
-    }
 
-    function check() {
-        const past = pastInput.value.trim().toLowerCase();
-        const part = partInput.value.trim().toLowerCase();
-        const correctPast = current[1].toLowerCase();
-        const correctPart = current[2].toLowerCase();
-        const pastOk = past === correctPast;
-        const partOk = part === correctPart;
+        function speak(field) {
+            let txt;
+            if (field === 'past') txt = pastInput.value;
+            else if (field === 'participle') txt = partInput.value;
+            else txt = current[0];
 
-        if (pastOk && partOk) {
-            score++;
-            scoreDisplay.textContent = `Score: ${score}`;
-            addSparkles();
-            // Play success sound
-            const successSound = document.getElementById("successSound");
-            successSound.currentTime = 0;
-            successSound.play();
-            showSuccessModal();
-            if (score >= 50) {
-                document.body.innerHTML = `<h1>🏆 Congratulations!</h1><div class='trophy'>🏆</div><p>You mastered the verbs!</p>`;
+            console.debug(`[Speech] speak('${field}') called. Text: "${txt}"`);
+            if (!txt) {
+                console.warn("[Speech] No text to speak for field:", field);
                 return;
             }
-            pastInput.value = "";
-            partInput.value = "";
-            // update(); // <-- Remove this line
-        } else {
-            score--;
-            scoreDisplay.textContent = `Score: ${score}`;
-            pastInput.disabled = true;
-            partInput.disabled = true;
-            const failSound = document.getElementById("failSound");
-            failSound.play();
-            // sleep for 1 second
-            gameBox.classList.add("shake");
+            if (!('speechSynthesis' in window)) {
+                console.error("[Speech] speechSynthesis API not available in this browser.");
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(txt);
+            utterance.lang = 'en-US';
+            if (enVoice) {
+                utterance.voice = enVoice;
+                console.debug("[Speech] Using voice:", enVoice);
+            } else {
+                console.warn("[Speech] No English voice set for utterance.");
+            }
+
+            utterance.onerror = (e) => {
+                console.error("[Speech] Utterance error:", e);
+            };
+            utterance.onstart = () => {
+                console.debug("[Speech] Utterance started.");
+            };
+            utterance.onend = () => {
+                console.debug("[Speech] Utterance ended.");
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        function speakAll(msg, rate = 1) {
+            console.debug(`[Speech] speakAll() called. Text: "${msg}", Rate: ${rate}`);
+            if (!('speechSynthesis' in window)) {
+                console.error("[Speech] speechSynthesis API not available in this browser.");
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(msg);
+            utterance.lang = 'en-US';
+            utterance.rate = rate;
+            if (enVoice) {
+                utterance.voice = enVoice;
+                console.debug("[Speech] Using voice:", enVoice);
+            } else {
+                console.warn("[Speech] No English voice set for utterance.");
+            }
+
+            utterance.onerror = (e) => {
+                console.error("[Speech] Utterance error:", e);
+            };
+            utterance.onstart = () => {
+                console.debug("[Speech] Utterance started.");
+            };
+            utterance.onend = () => {
+                console.debug("[Speech] Utterance ended.");
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        function showModal(msg) {
+            modal.textContent = msg;
+            modal.style.display = 'block';
+            speakAll(msg, 0.5); // slower for failures
             setTimeout(() => {
+                modal.style.display = 'none';
+                pastInput.disabled = false;
+                partInput.disabled = false;
+                pastInput.focus();
+            }, 5000);
+        }
+
+        function showSuccessModal() {
+            // Pick a random utterance
+            const utter = successUtterances[Math.floor(Math.random() * successUtterances.length)];
+            modal.textContent = utter;
+            setTimeout(() => {
+                modal.style.display = 'block';
+                speakAll(utter); // normal speed for success
                 pastInput.disabled = false;
                 partInput.disabled = false;
                 pastInput.focus();
             }, 1000);
-            setTimeout(() => gameBox.classList.remove("shake"), 500);
-            document.body.style.background = '#556b2f';
-            setTimeout(() => document.body.style.background = 'linear-gradient(45deg, #ffb6c1, #add8e6)', 600);
+
+            setTimeout(() => {
+                modal.style.display = 'none';
+                pastInput.value = "";
+                partInput.value = "";
+                update(); // Call update only after modal closes
+            }, 3000);
+        }
+
+        function addSparkles() {
+            for (let i = 0; i < 10; i++) {
+                const spark = document.createElement('div');
+                spark.className = 'spark';
+                spark.style.left = `${Math.random() * 100}%`;
+                spark.style.top = `${Math.random() * 100}%`;
+                document.body.appendChild(spark);
+                setTimeout(() => spark.remove(), 1000);
+            }
+        }
+
+        function check() {
+            const past = pastInput.value.trim().toLowerCase();
+            const part = partInput.value.trim().toLowerCase();
+            const correctPast = current[1].toLowerCase();
+            const correctPart = current[2].toLowerCase();
+            const pastOk = past === correctPast;
+            const partOk = part === correctPart;
+
+            if (pastOk && partOk) {
+                score++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                addSparkles();
+                // Play success sound
+                const successSound = document.getElementById("successSound");
+                successSound.currentTime = 0;
+                successSound.play();
+                showSuccessModal();
+                if (score >= 50) {
+                    document.body.innerHTML = `<h1>🏆 Congratulations!</h1><div class='trophy'>🏆</div><p>You mastered the verbs!</p>`;
+                    return;
+                }
+                pastInput.value = "";
+                partInput.value = "";
+            } else {
+                score--;
+                scoreDisplay.textContent = `Score: ${score}`;
+                pastInput.disabled = true;
+                partInput.disabled = true;
+                const failSound = document.getElementById("failSound");
+                failSound.play();
+                gameBox.classList.add("shake");
+                setTimeout(() => {
+                    pastInput.disabled = false;
+                    partInput.disabled = false;
+                    pastInput.focus();
+                }, 1000);
+                setTimeout(() => gameBox.classList.remove("shake"), 500);
+                document.body.style.background = '#556b2f';
+                setTimeout(() => document.body.style.background = 'linear-gradient(45deg, #ffb6c1, #add8e6)', 600);
                 setTimeout(() => showModal(`${current[0]}, ${current[1]}, ${current[2]}`), 2000);
-            mistakes.set(current[0], (mistakes.get(current[0]) || 1) + 1);
+                mistakes.set(current[0], (mistakes.get(current[0]) || 1) + 1);
+            }
         }
     }
-
-    update();
-
-    // Background music logic
-    const bgMusic = document.getElementById("bgMusic");
-    bgMusic.volume = 0.5;
-    bgMusic.play().catch(() => {}); // Autoplay may be blocked until user interacts
-
-    const musicToggleBtn = document.getElementById("musicToggleBtn");
-    let musicPlaying = true;
-    musicToggleBtn.onclick = function() {
-        if (musicPlaying) {
-            bgMusic.pause();
-            musicToggleBtn.title = "Play Music";
-            musicToggleBtn.classList.add("stopped");
-        } else {
-            bgMusic.play();
-            musicToggleBtn.title = "Stop Music";
-            musicToggleBtn.classList.remove("stopped");
-        }
-        musicPlaying = !musicPlaying;
-    };
-
-    // Add push animation to submit button on click
-    const submitBtn = document.getElementById("submitBtn");
-    submitBtn.addEventListener("click", function() {
-        submitBtn.classList.add("submit-btn-push");
-        setTimeout(() => submitBtn.classList.remove("submit-btn-push"), 120);
-    });
-
-    // Add debug for speech icon clicks
-    document.querySelectorAll('.fa-volume-up').forEach(icon => {
-        icon.addEventListener('click', (e) => {
-            console.debug("[Speech] Volume icon clicked.", e.target);
-        });
-    });
 </script>
 </body>
 </html>
