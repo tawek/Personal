@@ -115,7 +115,7 @@
         .music-icon:hover {
             filter: brightness(1.5);
         }
-        .submit-btn {
+        .submit-btn, .restart-btn {
             margin-top: 18px;
             font-size: 1.4em;
             padding: 16px 44px;
@@ -128,7 +128,7 @@
             cursor: pointer;
             transition: transform 0.08s, box-shadow 0.08s;
         }
-        .submit-btn:active {
+        .submit-btn:active, .restart-btn:active {
             transform: scale(0.93);
             box-shadow: 0 2px 8px #ffb6c1;
         }
@@ -170,6 +170,80 @@
         .start-button:active {
             transform: scale(0.95);
         }
+
+        /* Victory screen styles */
+        .victory-container {
+            display: none;
+            z-index: 1001;
+        }
+        .victory-box {
+            background: linear-gradient(to bottom, #fff8dc, #fffacd);
+            border: 5px solid gold;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 0 30px gold;
+            text-align: center;
+            width: 90%;
+            max-width: 600px;
+        }
+        .victory-trophy {
+            font-size: 8em;
+            color: gold;
+            display: inline-block;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+        }
+
+        @keyframes trophy-animation {
+            0% { transform: translateY(0) rotate(0deg); }
+            20% { transform: translateY(-30px) rotate(-5deg); }
+            30% { transform: translateY(-40px) rotate(5deg); }
+            40% { transform: translateY(-30px) rotate(-5deg); }
+            50% { transform: translateY(-40px) rotate(5deg); }
+            60% { transform: translateY(-30px) rotate(-5deg); }
+            70% { transform: translateY(0) rotate(0deg); }
+            75% { transform: translateY(-10px) rotate(0deg); }
+            80% { transform: translateY(0) rotate(0deg); }
+            85% { transform: translateY(-5px) rotate(0deg); }
+            90% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+
+        .animate-trophy {
+            animation: trophy-animation 3s ease-in-out;
+        }
+
+        .trophy-sparkle {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px 2px gold;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes float-sparkle {
+            0% { transform: translate(0, 0) scale(0); opacity: 0; }
+            10% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; }
+        }
+
+        .victory-title {
+            font-size: 3.5em;
+            background: linear-gradient(to right, #ff69b4, #ffd700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .victory-message {
+            font-size: 1.8em;
+            color: #444;
+            margin-bottom: 30px;
+        }
     </style>
 </head>
 <body>
@@ -194,10 +268,24 @@
         <div id="scoreDisplay" class="score">Score: 0</div>
     </div>
 </div>
+
+<!-- Victory screen container -->
+<div class="container victory-container" id="victoryContainer">
+    <div class="game-box victory-box">
+        <div class="victory-trophy-container">
+            <div class="victory-trophy" id="victoryTrophy">🏆</div>
+        </div>
+        <div class="victory-title">Congratulations!</div>
+        <div class="victory-message">You've mastered all irregular verbs!</div>
+        <button class="restart-btn" id="restartBtn">Play Again</button>
+    </div>
+</div>
+
 <div class="modal" id="modal"></div>
 <audio id="failSound" src="puzzle-error.mp3"></audio>
 <audio id="successSound" src="success-sound.mp3"></audio>
 <audio id="bgMusic" src="peaceful-soundscape.mp3" loop></audio>
+<audio id="victorySound" src="success-sound.mp3"></audio>
 <script>
     // Define game data and variables
     const verbs = [
@@ -232,13 +320,22 @@
     // Get DOM references
     const coverOverlay = document.getElementById("coverOverlay");
     const gameContainer = document.getElementById("gameContainer");
+    const victoryContainer = document.getElementById("victoryContainer");
     const startBtn = document.getElementById("startBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const victoryTrophy = document.getElementById("victoryTrophy");
+
+    // Restart button click handler
+    restartBtn.onclick = function() {
+        location.reload();
+    };
 
     // Start button click handler - all game initialization happens here
     startBtn.onclick = function() {
         // Hide overlay and show game
         coverOverlay.style.display = 'none';
         gameContainer.style.display = 'flex';
+        victoryContainer.style.display = 'none';
 
         // Initialize the game after user interaction
         initGame();
@@ -257,11 +354,7 @@
         let musicPlaying = true;
 
         // Add mastery counter map - start with 3 for each verb
-        const masteryCounts = new Map(verbs.map(verb => [verb[0], 0]));
-        // set first 3 verbs to 1
-        masteryCounts.set(verbs[0][0], 1);
-        masteryCounts.set(verbs[1][0], 1);
-        masteryCounts.set(verbs[2][0], 1);
+        const masteryCounts = new Map(verbs.map(verb => [verb[0], 3]));
         let remainingVerbs = verbs.length; // Track non-mastered verbs
 
         // Get DOM elements
@@ -274,6 +367,7 @@
         const musicToggleBtn = document.getElementById("musicToggleBtn");
         const submitBtn = document.getElementById("submitBtn");
         const bgMusic = document.getElementById("bgMusic");
+        const victorySound = document.getElementById("victorySound");
 
         // Load voices - should work immediately after user interaction
         loadVoice();
@@ -564,6 +658,84 @@
             scoreDisplay.textContent = `Progress: ${masteryPercentage}% (${masteredCount}/${verbs.length} verbs mastered)`;
         }
 
+        // Create sparkles around the trophy
+        function createTrophySparkles() {
+            const trophyRect = victoryTrophy.getBoundingClientRect();
+            const centerX = trophyRect.x + trophyRect.width / 2;
+            const centerY = trophyRect.y + trophyRect.height / 2;
+
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'trophy-sparkle';
+                    document.body.appendChild(sparkle);
+
+                    // Random position around the trophy
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * 100 + 50;
+                    const startX = centerX + Math.random() * 50 - 25;
+                    const startY = centerY + Math.random() * 50 - 25;
+
+                    sparkle.style.left = `${startX}px`;
+                    sparkle.style.top = `${startY}px`;
+
+                    // Set random end point with CSS variables
+                    const endX = Math.cos(angle) * distance;
+                    const endY = Math.sin(angle) * distance;
+                    sparkle.style.setProperty('--x', `${endX}px`);
+                    sparkle.style.setProperty('--y', `${endY}px`);
+
+                    // Random size
+                    const size = Math.random() * 15 + 5;
+                    sparkle.style.width = `${size}px`;
+                    sparkle.style.height = `${size}px`;
+
+                    // Random animation duration
+                    const duration = Math.random() * 1.5 + 1;
+                    sparkle.style.animation = `float-sparkle ${duration}s ease-out forwards`;
+
+                    // Remove after animation
+                    setTimeout(() => {
+                        sparkle.remove();
+                    }, duration * 1000);
+                }, i * 100);
+            }
+        }
+
+        // Show victory screen with animation and sound
+        function showVictoryScreen() {
+            // Hide game container and show victory container
+            gameContainer.style.display = 'none';
+            victoryContainer.style.display = 'flex';
+
+            // Play victory sound repeatedly
+            const playSounds = () => {
+                victorySound.currentTime = 0;
+                victorySound.play().catch(e => console.warn("[Audio] Victory sound failed:", e));
+            };
+            playSounds();
+            const soundInterval = setInterval(playSounds, 2000);
+            setTimeout(() => clearInterval(soundInterval), 10000);  // Stop after 10 seconds
+
+            // Animate trophy
+            setTimeout(() => {
+                victoryTrophy.classList.add('animate-trophy');
+                createTrophySparkles();
+
+                // Repeat trophy animation and sparkles
+                setInterval(() => {
+                    victoryTrophy.classList.remove('animate-trophy');
+                    setTimeout(() => {
+                        victoryTrophy.classList.add('animate-trophy');
+                        createTrophySparkles();
+                    }, 100);
+                }, 6000);  // Repeat every 6 seconds
+            }, 500);
+
+            // Speak congratulations
+            speakAll("Congratulations! You've mastered all the irregular verbs!", 0.9);
+        }
+
         // Success function to handle all success-related logic in sequence
         function success() {
             // Update mastery counter for current verb
@@ -573,7 +745,6 @@
 
                 // If verb is now mastered, decrement remaining verbs count
                 if (masteryCounts.get(current[0]) === 0) {
-                    remainingVerbs--;
                     console.debug(`[Game] Verb "${current[0]}" mastered! Remaining verbs: ${remainingVerbs}`);
                 }
             }
@@ -593,7 +764,7 @@
 
             // Check for game completion - all verbs mastered
             if (remainingVerbs <= 0) {
-                document.body.innerHTML = `<h1>🏆 Congratulations!</h1><div class='trophy'>🏆</div><p>You mastered all the verbs!</p>`;
+                showVictoryScreen();
                 return;
             }
 
