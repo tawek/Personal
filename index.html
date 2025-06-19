@@ -427,6 +427,7 @@
 
         // Expose functions to global scope for inline handlers
         window.speak = speak;
+        window.speakText = speakText;
         window.check = check;
 
         // CORE FUNCTIONS
@@ -611,8 +612,8 @@
         }
 
 
-        function speakAll(msg, rate = 1) {
-            console.debug(`[Speech] speakAll() called. Text: "${msg}", Rate: ${rate}`);
+        function speakText(msg, rate=1, callback) {
+            console.debug(`[Speech] speakText() called. Text: "${msg}", Rate: ${rate}`);
             if (!('speechSynthesis' in window)) {
                 console.error("[Speech] speechSynthesis API not available in this browser.");
                 return;
@@ -636,6 +637,10 @@
             };
             utterance.onend = () => {
                 console.debug("[Speech] Utterance ended.");
+                if (callback) {
+                    console.debug("[Speech] Calling callback after utterance end.");
+                    callback();
+                }
             };
 
             speechSynthesis.speak(utterance);
@@ -644,7 +649,7 @@
         function showModal(msg) {
             modal.textContent = msg;
             modal.style.display = 'block';
-            speakAll(msg, 0.5); // slower for failures
+            speakText(msg, 0.5); // slower for failures
             setTimeout(() => {
                 modal.style.display = 'none';
                 pastInput.disabled = false;
@@ -751,7 +756,7 @@
             }, 500);
 
             // Speak congratulations
-            speakAll("Congratulations! You've mastered all the irregular verbs!", 0.9);
+            speakText("Congratulations! You've mastered all the irregular verbs!", 0.9);
         }
 
         // Success function to handle all success-related logic in sequence
@@ -799,7 +804,7 @@
                     modal.textContent = utter;
                     modal.style.display = 'block';
 
-                    speak(utter, function() {
+                    speakText(utter, 1, function() {
                         // After all audio completes, close modal and update for next word
                         setTimeout(() => {
                             modal.style.display = 'none';
@@ -882,6 +887,26 @@
             }
         }
     }
+
+    const pastInput  = document.getElementById("past");
+        // Add event listeners for Enter key to move to the next input and speak the entered word
+    pastInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            speakText(pastInput.value); // Speak the entered word
+            partInput.focus(); // Move to the next input
+        }
+    });
+
+    const partInput = document.getElementById("participle");
+    partInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            speakText(partInput.value); // Speak the entered word
+            submitBtn.focus(); // Optionally focus the submit button
+        }
+    });
+
 </script>
 </body>
 </html>
