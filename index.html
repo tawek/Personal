@@ -39,6 +39,11 @@
             margin-bottom: 10px;
             color: #ff1493;
         }
+        .translation {
+            font-size: 0.6em;
+            color: #666;
+            margin-left: 8px;
+        }
         .inputs input {
             font-size: 1.2em;
             margin: 10px;
@@ -307,55 +312,77 @@
 <script>
     // Define game data and variables
     const verbs1 = [
-        ["be", "was/were", "been"], ["become", "became", "become"], ["begin", "began", "begun"],
-        ["bring", "brought", "brought"], ["build", "built", "built"], ["buy", "bought", "bought"],
-        ["catch", "caught", "caught"], ["choose", "chose", "chosen"], ["come", "came", "come"],
-        ["cost", "cost", "cost"], ["cut", "cut", "cut"], ["do", "did", "done"], ["draw", "drew", "drawn"],
-        ["drink", "drank", "drunk"], ["drive", "drove", "driven"], ["eat", "ate", "eaten"],
-        ["fall", "fell", "fallen"], ["feed", "fed", "fed"], ["feel", "felt", "felt"], ["fight", "fought", "fought"],
-        ["find", "found", "found"], ["fly", "flew", "flown"], ["forget", "forgot", "forgotten"],
-        ["get", "got", "gotten"], ["give", "gave", "given"], ["go", "went", "gone"],
-        ["have", "had", "had"], ["hear", "heard", "heard"], ["keep", "kept", "kept"],
-        ["know", "knew", "known"], ["learn", "learned", "learned"], ["leave", "left", "left"],
-        ["let", "let", "let"]
+        ["be", "was/were", "been", "być"],
+        ["become", "became", "become", "stawać się"],
+        ["begin", "began", "begun", "zaczynać"],
+        ["bring", "brought", "brought", "przynosić"],
+        ["build", "built", "built", "budować"],
+        ["buy", "bought", "bought", "kupować"],
+        ["catch", "caught", "caught", "łapać"],
+        ["choose", "chose", "chosen", "wybierać"],
+        ["come", "came", "come", "przychodzić"],
+        ["cost", "cost", "cost", "kosztować"],
+        ["cut", "cut", "cut", "ciąć"],
+        ["do", "did", "done", "robić"],
+        ["draw", "drew", "drawn", "rysować"],
+        ["drink", "drank", "drunk", "pić"],
+        ["drive", "drove", "driven", "prowadzić"],
+        ["eat", "ate", "eaten", "jeść"],
+        ["fall", "fell", "fallen", "upadać"],
+        ["feed", "fed", "fed", "karmić"],
+        ["feel", "felt", "felt", "czuć"],
+        ["fight", "fought", "fought", "walczyć"],
+        ["find", "found", "found", "znajdować"],
+        ["fly", "flew", "flown", "latać"],
+        ["forget", "forgot", "forgotten", "zapominać"],
+        ["get", "got", "gotten", "dostawać"],
+        ["give", "gave", "given", "dawać"],
+        ["go", "went", "gone", "iść"],
+        ["have", "had", "had", "mieć"],
+        ["hear", "heard", "heard", "słyszeć"],
+        ["keep", "kept", "kept", "trzymać"],
+        ["know", "knew", "known", "znać"],
+        ["learn", "learned", "learned", "uczyć się"],
+        ["leave", "left", "left", "opuszczać"],
+        ["let", "let", "let", "pozwalać"]
     ];
 
     const verbs2 = [
-        ["lose", "lost", "lost"],
-        ["make", "made", "made"],
-        ["mean", "meant", "meant"],
-        ["meet", "met", "met"],
-        ["pay", "paid", "paid"],
-        ["put", "put", "put"],
-        ["read", "read", "read"],
-        ["ride", "rode", "ridden"],
-        ["ring", "rang", "rung"],
-        ["run", "ran", "run"],
-        ["say", "said", "said"],
-        ["see", "saw", "seen"],
-        ["sell", "sold", "sold"],
-        ["send", "sent", "sent"],
-        ["show", "showed", "shown"],
-        ["shut", "shut", "shut"],
-        ["sit", "sat", "sat"],
-        ["sleep", "slept", "slept"],
-        ["speak", "spoke", "spoken"],
-        ["spend", "spent", "spent"],
-        ["spill", "spilt", "spilt"],
-        ["stand", "stood", "stood"],
-        ["stick", "stuck", "stuck"],
-        ["break", "broke", "broken"],
-        ["steal", "stole", "stolen"],
-        ["swim", "swam", "swum"],
-        ["take", "took", "taken"],
-        ["teach", "taught", "taught"],
-        ["tell", "told", "told"],
-        ["think", "thought", "thought"],
-        ["understand", "understood", "understood"],
-        ["wake", "woke", "woken"],
-        ["wear", "wore", "worn"],
-        ["win", "won", "won"],
-        ["write", "wrote", "written"]
+        ["lose", "lost", "lost", "tracić"],
+        ["make", "made", "made", "robić"],
+        ["mean", "meant", "meant", "znaczyć"],
+        ["meet", "met", "met", "spotykać"],
+        ["pay", "paid", "paid", "płacić"],
+        ["put", "put", "put", "kłaść"],
+        ["read", "read", "read", "czytać"],
+        ["ride", "rode", "ridden", "jeździć"],
+        ["ring", "rang", "rung", "dzwonić"],
+        ["run", "ran", "run", "biec"],
+        ["say", "said", "said", "mówić"],
+        ["see", "saw", "seen", "widzieć"],
+        ["sell", "sold", "sold", "sprzedawać"],
+        ["send", "sent", "sent", "wysyłać"],
+        ["show", "showed", "shown", "pokazywać"],
+        ["shut", "shut", "shut", "zamykać"],
+        ["sit", "sat", "sat", "siedzieć"],
+        ["sleep", "slept", "slept", "spać"],
+        ["speak", "spoke", "spoken", "mówić"],
+        ["spend", "spent", "spent", "spędzać"],
+        ["spill", "spilt", "spilt", "rozlewać"],
+        ["stand", "stood", "stood", "stać"],
+        ["stick", "stuck", "stuck", "przyklejać"],
+        ["break", "broke", "broken", "łamać"],
+        ["steal", "stole", "stolen", "kraść"],
+        ["swim", "swam", "swum", "pływać"],
+        ["take", "took", "taken", "brać"],
+        ["teach", "taught", "taught", "uczyć"],
+        ["tell", "told", "told", "opowiadać"],
+        ["think", "thought", "thought", "myśleć"],
+        ["understand", "understood", "understood", "rozumieć"],
+        ["wake", "woke", "woken", "budzić"],
+        ["wear", "wore", "worn", "nosić"],
+        ["win", "won", "won", "wygrywać"],
+        ["write", "wrote", "written", "pisać"]
     ];
 
     const verbs = verbs2;
@@ -646,7 +673,7 @@
         function update() {
             // Get next verb based on weighted selection
             current = chooseVerb();
-            verbEl.innerHTML = `${current[0]} <i class='fas fa-volume-up' onclick="speak('verb')"></i>`;
+            verbEl.innerHTML = `${current[0]} <span class="translation">(${current[3]})</span> <i class='fas fa-volume-up' onclick="speak('verb')"></i>`;
             // Auto-speak after user interaction
             speak('verb');
             // Focus on past input
